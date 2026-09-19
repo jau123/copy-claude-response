@@ -74,11 +74,62 @@ format_time_ago() {
     echo "$time_display"
 }
 
+# Function to copy through an optional clipboard relay.
+#
+# This is useful when Claude Code runs on a remote Linux host over SSH/tmux but
+# the clipboard belongs to the local machine. Hook stdout/stderr may be captured
+# by Claude Code, so OSC52-style terminal output is not always reliable there.
+copy_to_clipboard_relay() {
+    local text="$1"
+    local relay="${COPY_CLAUDE_CLIPBOARD_RELAY:-}"
+    local token_file="${COPY_CLAUDE_CLIPBOARD_RELAY_TOKEN_FILE:-}"
+    local temp_file status
+
+    [ -n "$relay" ] || return 1
+    command -v python3 >/dev/null 2>&1 || return 1
+
+    temp_file=$(mktemp)
+    printf '%s' "$text" > "$temp_file"
+
+    python3 - "$relay" "$token_file" "$temp_file" <<'PYCLIENT'
+import os
+import socket
+import sys
+from pathlib import Path
+
+relay, token_file, payload_file = sys.argv[1:4]
+if ":" not in relay:
+    raise SystemExit(1)
+
+host, port_text = relay.rsplit(":", 1)
+payload = Path(payload_file).read_bytes()
+token = b""
+
+if token_file:
+    token = Path(os.path.expanduser(token_file)).read_text(encoding="utf-8").strip().encode()
+
+try:
+    with socket.create_connection((host, int(port_text)), timeout=2.0) as sock:
+        sock.sendall(token + b"\n" + payload)
+        sock.shutdown(socket.SHUT_WR)
+        response = sock.recv(1024)
+    if not response.startswith(b"OK"):
+        raise SystemExit(1)
+except Exception:
+    raise SystemExit(1)
+PYCLIENT
+    status=$?
+    rm -f "$temp_file"
+    return "$status"
+}
+
 # Function to copy text to clipboard (cross-platform)
 copy_to_clipboard() {
     local text="$1"
 
-    if command -v pbcopy >/dev/null 2>&1; then
+    if copy_to_clipboard_relay "$text"; then
+        return 0
+    elif command -v pbcopy >/dev/null 2>&1; then
         # macOS - printf preserves UTF-8 better than echo
         printf '%s' "$text" | pbcopy
     elif command -v xclip >/dev/null 2>&1; then

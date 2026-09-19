@@ -216,6 +216,9 @@ brew install coreutils
 - **Linux**: Install xclip: `sudo apt install xclip`
 - **WSL**: Ensure Windows clipboard integration is enabled
 - **macOS**: pbcopy should work by default
+- **Remote SSH/tmux to macOS**: see
+  [Remote SSH/tmux macOS clipboard relay](docs/remote-ssh-tmux-macos.md)
+  for an optional SSH reverse-forwarded `pbcopy` relay.
 
 **No responses found?**
 

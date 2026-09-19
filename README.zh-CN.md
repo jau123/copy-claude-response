@@ -216,6 +216,9 @@ brew install coreutils
 - **Linux**：安装 xclip：`sudo apt install xclip`
 - **WSL**：确保 Windows 剪贴板集成已启用
 - **macOS**：pbcopy 应该默认可用
+- **远程 SSH/tmux 连接到 macOS 本地剪贴板**：参见
+  [Remote SSH/tmux macOS clipboard relay](docs/remote-ssh-tmux-macos.md)，
+  可通过 SSH 反向转发使用本地 `pbcopy` relay。
 
 **找不到回复？**
 
